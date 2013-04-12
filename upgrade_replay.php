@@ -1,6 +1,6 @@
 <?php
 
-include_once dirname(dirname(__FILE__)).'/app/Mage.php';
+include_once '../app/Mage.php';
 Mage::app();
 
 class Upgrade_Replay {
@@ -14,10 +14,9 @@ class Upgrade_Replay {
 
     protected $_queries = array();
 
-    public function prepare($skipQuery = null)
+    public function prepare($skipQuery = null, $upgradeLog = 'pdo_mysql.log')
     {
 
-        $upgradeLog = 'pdo_mysql.log';
         $fp = fopen($upgradeLog,'rb');
 
         $matches = array();
@@ -279,6 +278,8 @@ class Upgrade_Replay {
             '/\s*(COMMENT|ENGINE|DEFAULT CHARACTER SET)(.*)/',
             '/\s*(ADD UNIQUE|ADD INDEX|ADD FULLTEXT|ADD PRIMARY KEY)(.*)/',
             '/\s*(ADD CONSTRAINT|DROP COLUMN)(.*)/',
+            '/\s*(DISABLE KEYS)(.*)/',
+            '/\s*(ENABLE KEYS)(.*)/',
         );
         $q1Rank =  $q2Rank =  -1;
         foreach ($ranks as  $rank => $regex) {
@@ -324,6 +325,8 @@ class Upgrade_Replay {
             '/\s*(CHANGE COLUMN|CHANGE|COMMENT|ENGINE|DEFAULT CHARACTER SET)(.*)/',
             '/\s*(ADD UNIQUE|ADD INDEX|ADD FULLTEXT|ADD PRIMARY KEY)(.*)/',
             '/\s*(ADD CONSTRAINT|DROP COLUMN)(.*)/',
+            '/\s*(DISABLE KEYS)(.*)/',
+            '/\s*(ENABLE KEYS)(.*)/',
         );
         $ddlBlocks = $this->_getDDLBlocks();
 
@@ -765,9 +768,16 @@ class Upgrade_Replay {
 
 $track = new Upgrade_Replay();
 //$track->prepare("/ALTER TABLE `customer_entity` MODIFY COLUMN `website_id` smallint UNSIGNED NULL COMMENT ''/");
-$track->prepare();
+
+$logFile = $_SERVER['argv'][1];
+if (empty($logFile) || !is_file($logFile)) {
+    throw new Exception('Invalid log file');
+}
+
+$track->prepare(null, $logFile);
 
 $track->echoQueries();
+exit;
 //$noOfThreads = 4;
 echo date(DATE_RFC822) ." ---- Started\r\n";
 //$track->runSingle(false);
